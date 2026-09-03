@@ -7,15 +7,25 @@ import {
   CreateBucketCommand,
 } from "@aws-sdk/client-s3";
 
-const BUCKET = process.env.MINIO_BUCKET ?? "docvault-files";
+// Generic S3-compatible config so this works against MinIO (local dev) or
+// a real S3-compatible provider (Cloudflare R2, etc.) with no code change —
+// only S3_* env vars differ. Falls back to the local MinIO defaults when
+// S3_* isn't set, so existing local dev setups keep working unchanged.
+const ENDPOINT =
+  process.env.S3_ENDPOINT ??
+  `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}`;
+const REGION = process.env.S3_REGION ?? "us-east-1";
+const ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID ?? process.env.MINIO_ACCESS_KEY!;
+const SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY ?? process.env.MINIO_SECRET_KEY!;
+const BUCKET = process.env.S3_BUCKET ?? process.env.MINIO_BUCKET ?? "docvault-files";
 
 const client = new S3Client({
-  endpoint: `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}`,
-  region: "us-east-1",
+  endpoint: ENDPOINT,
+  region: REGION,
   forcePathStyle: true,
   credentials: {
-    accessKeyId: process.env.MINIO_ACCESS_KEY!,
-    secretAccessKey: process.env.MINIO_SECRET_KEY!,
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
   },
 });
 

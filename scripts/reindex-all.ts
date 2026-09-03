@@ -1,33 +1,24 @@
-// One-off migration: existing chunks were embedded without the
-// search_document:/search_query: task prefix nomic-embed-text requires.
-// Clear all chunks and re-enqueue every document for embedding so the
-// whole index is consistent with the corrected embeddings.ts.
+// One-off tool: re-extract, re-chunk, and re-embed every document. Useful
+// after any change to extract-text.ts, chunk.ts, or the embedding model
+// (a different model/dimension makes existing chunks incomparable to new
+// query embeddings, so they need regenerating, not just appending to).
 import { prisma } from "../src/lib/prisma";
-import { enqueueEmbedJob } from "../src/lib/queue";
+import { processDocument } from "../src/lib/process-document";
 
 async function main() {
   const docs = await prisma.document.findMany({
-    where: { status: { in: ["ready", "failed"] } },
+    where: { status: { in: ["ready", "failed"] }, size: { gt: 0 } },
     select: { id: true, title: true },
   });
 
   console.log(`Re-indexing ${docs.length} document(s)...`);
 
-  await prisma.documentChunk.deleteMany({
-    where: { docId: { in: docs.map((d) => d.id) } },
-  });
-
-  await prisma.document.updateMany({
-    where: { id: { in: docs.map((d) => d.id) } },
-    data: { status: "pending", statusReason: null },
-  });
-
   for (const doc of docs) {
-    await enqueueEmbedJob(doc.id);
-    console.log(`Enqueued: ${doc.title}`);
+    await processDocument(doc.id);
+    console.log(`Done: ${doc.title}`);
   }
 
-  console.log("Done. Run the worker to process the queue.");
+  console.log("All documents re-indexed.");
   process.exit(0);
 }
 

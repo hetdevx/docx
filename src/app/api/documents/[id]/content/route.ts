@@ -2,7 +2,7 @@ import mammoth from "mammoth";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, uploadFile } from "@/lib/storage";
 import { extractText } from "@/lib/extract-text";
-import { enqueueEmbedJob } from "@/lib/queue";
+import { processDocument } from "@/lib/process-document";
 import { canEdit } from "@/lib/access";
 import { loadDocumentOrThrow } from "@/lib/documents";
 import { UnauthorizedError, ForbiddenError, NotFoundError } from "@/lib/require-user";
@@ -100,20 +100,12 @@ export async function PUT(
     const buffer = Buffer.from(body.html, "utf-8");
     await uploadFile(doc.storagePath, buffer, "text/html");
 
-    await prisma.$transaction([
-      prisma.documentChunk.deleteMany({ where: { docId: id } }),
-      prisma.document.update({
-        where: { id },
-        data: {
-          mimeType: "text/html",
-          size: buffer.byteLength,
-          status: "pending",
-          statusReason: null,
-        },
-      }),
-    ]);
+    await prisma.document.update({
+      where: { id },
+      data: { mimeType: "text/html", size: buffer.byteLength },
+    });
 
-    await enqueueEmbedJob(id);
+    await processDocument(id);
 
     return Response.json({ ok: true });
   } catch (err) {

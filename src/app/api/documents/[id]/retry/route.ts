@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { enqueueEmbedJob } from "@/lib/queue";
+import { processDocument } from "@/lib/process-document";
 import { loadDocumentOrThrow } from "@/lib/documents";
 import { UnauthorizedError, ForbiddenError, NotFoundError } from "@/lib/require-user";
 
@@ -18,16 +18,8 @@ export async function POST(
       );
     }
 
-    // Clear out any chunks a previous attempt may have partially written
-    // before re-queuing, so a later success doesn't leave duplicates behind.
-    await prisma.$executeRaw`DELETE FROM document_chunks WHERE doc_id = ${id}`;
-
-    const document = await prisma.document.update({
-      where: { id },
-      data: { status: "pending", statusReason: null },
-    });
-
-    await enqueueEmbedJob(id);
+    await processDocument(id);
+    const document = await prisma.document.findUniqueOrThrow({ where: { id } });
 
     return Response.json({ document });
   } catch (err) {

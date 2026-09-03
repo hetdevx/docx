@@ -23,11 +23,3 @@ COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 CMD ["node", "server.js"]
-
-# Worker needs the full source tree + node_modules (not the Next.js
-# standalone bundle) since it runs independently of the Next.js server.
-FROM oven/bun:1 AS worker
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app /app
-CMD ["bun", "run", "src/worker/index.ts"]

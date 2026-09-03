@@ -69,7 +69,7 @@ model DocumentChunk {
   docId      String                   @map("doc_id")
   chunkText  String                   @map("chunk_text")
   chunkIndex Int                      @map("chunk_index")
-  embedding  Unsupported("vector(768)")
+  embedding  Unsupported("vector(2048)")
 
   document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
 

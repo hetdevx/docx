@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
-import { enqueueEmbedJob } from "@/lib/queue";
+import { processDocument } from "@/lib/process-document";
 import { requireUser, UnauthorizedError } from "@/lib/require-user";
 import {
   ALLOWED_MIME_TYPES,
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       },
     });
 
-    await enqueueEmbedJob(document.id);
+    await processDocument(document.id);
 
     return Response.json({ document }, { status: 201 });
   } catch (err) {
