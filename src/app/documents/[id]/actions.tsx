@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Share2, Trash2, X, XCircle } from "lucide-react";
+import { Download, RefreshCw, Share2, Trash2, X, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, Textarea } from "@/components/ui/input";
 
 type AccessRow = { email: string; permission: "read" | "edit" };
 
@@ -24,11 +28,13 @@ export function DocumentDetailActions({
   editable,
   isPublic,
   access,
+  status,
 }: {
   documentId: string;
   editable: boolean;
   isPublic: boolean;
   access: AccessRow[];
+  status: string;
 }) {
   const router = useRouter();
   const [sharePanelOpen, setSharePanelOpen] = useState(false);
@@ -37,6 +43,7 @@ export function DocumentDetailActions({
   const [sharePermission, setSharePermission] = useState<"read" | "edit">("read");
   const [rows, setRows] = useState(access);
   const [busy, setBusy] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const alreadyShared = new Set(rows.map((r) => r.email));
@@ -141,45 +148,56 @@ export function DocumentDetailActions({
     }
   }
 
+  async function handleRetry() {
+    setRetrying(true);
+    setError(null);
+    const res = await fetch(`/api/documents/${documentId}/retry`, { method: "POST" });
+    setRetrying(false);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Retry failed");
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <a
           href={`/api/documents/${documentId}/download`}
-          className="inline-flex items-center gap-1.5 rounded-md bg-zinc-950 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-950 px-3 py-1.5 text-sm font-medium hover:opacity-90"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors px-3.5 py-2 text-sm bg-accent text-accent-foreground hover:bg-accent-hover"
         >
           <Download className="h-4 w-4" />
           Download
         </a>
+        {editable && status === "failed" && (
+          <Button onClick={handleRetry} disabled={retrying}>
+            <RefreshCw className={`h-4 w-4 ${retrying ? "animate-spin" : ""}`} />
+            {retrying ? "Retrying..." : "Retry processing"}
+          </Button>
+        )}
         {editable && (
           <>
-            <button
+            <Button
+              variant={sharePanelOpen ? "primary" : "secondary"}
               onClick={() => setSharePanelOpen((o) => !o)}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium border ${
-                sharePanelOpen
-                  ? "border-zinc-950 dark:border-zinc-50 text-zinc-950 dark:text-zinc-50"
-                  : "border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-              }`}
             >
               <Share2 className="h-4 w-4" />
               Share
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-md border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 px-3 py-1.5 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50"
-            >
+            </Button>
+            <Button variant="danger" onClick={handleDelete} disabled={busy}>
               <Trash2 className="h-4 w-4" />
               Delete
-            </button>
+            </Button>
           </>
         )}
       </div>
 
       {editable && sharePanelOpen && (
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+        <Card className="p-4 space-y-4 bg-background/50">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+            <h2 className="text-sm font-medium text-foreground">
               Sharing
             </h2>
             <button onClick={() => setSharePanelOpen(false)} className="text-zinc-400 hover:text-zinc-600">
@@ -187,9 +205,8 @@ export function DocumentDetailActions({
             </button>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-            <input
-              type="checkbox"
+          <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
+            <Checkbox
               checked={publicState}
               disabled={busy}
               onChange={(e) => handleTogglePublic(e.target.checked)}
@@ -198,29 +215,24 @@ export function DocumentDetailActions({
           </label>
 
           <div className="space-y-2">
-            <textarea
+            <Textarea
               placeholder="colleague@company.com, another@company.com&#10;(comma or newline separated — add as many as you like)"
               value={shareEmails}
               onChange={(e) => setShareEmails(e.target.value)}
               rows={2}
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm resize-y"
             />
             <div className="flex items-center gap-2">
-              <select
+              <Select
                 value={sharePermission}
                 onChange={(e) => setSharePermission(e.target.value as "read" | "edit")}
-                className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1.5 text-sm"
+                className="w-auto"
               >
                 <option value="read">Can read</option>
                 <option value="edit">Can edit</option>
-              </select>
-              <button
-                disabled={busy || pendingEmails.length === 0}
-                onClick={handleShare}
-                className="rounded-md bg-zinc-950 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-950 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-              >
+              </Select>
+              <Button disabled={busy || pendingEmails.length === 0} onClick={handleShare}>
                 {pendingEmails.length > 1 ? `Share with ${pendingEmails.length}` : "Share"}
-              </button>
+              </Button>
             </div>
             {updateCount > 0 && (
               <p className="text-xs text-zinc-500">
@@ -237,17 +249,17 @@ export function DocumentDetailActions({
                 <li key={r.email} className="flex items-center justify-between gap-2">
                   <span className="truncate">{r.email}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <select
+                    <Select
                       value={r.permission}
                       disabled={busy}
                       onChange={(e) =>
                         handlePermissionChange(r.email, e.target.value as "read" | "edit")
                       }
-                      className="rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-1.5 py-0.5 text-xs"
+                      className="w-auto py-1 text-xs"
                     >
                       <option value="read">Can read</option>
                       <option value="edit">Can edit</option>
-                    </select>
+                    </Select>
                     <button
                       onClick={() => handleRemove(r.email)}
                       disabled={busy}
@@ -261,7 +273,7 @@ export function DocumentDetailActions({
               ))}
             </ul>
           )}
-        </div>
+        </Card>
       )}
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

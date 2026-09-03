@@ -1,27 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import { canEdit } from "@/lib/access";
-import { requireUser, UnauthorizedError } from "@/lib/require-user";
+import { loadDocumentOrThrow } from "@/lib/documents";
+import { UnauthorizedError, ForbiddenError, NotFoundError } from "@/lib/require-user";
 
 export async function POST(
   request: Request,
   { params }: RouteContext<"/api/documents/[id]/share">,
 ) {
   try {
-    const user = await requireUser();
     const { id } = await params;
-
-    const doc = await prisma.document.findUnique({
-      where: { id },
-      include: { access: true },
-    });
-
-    if (!doc) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
-
-    if (!canEdit(user, doc)) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await loadDocumentOrThrow(id, "edit");
 
     const body = await request.json().catch(() => null);
 
@@ -57,6 +44,12 @@ export async function POST(
     if (err instanceof UnauthorizedError) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (err instanceof NotFoundError) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    if (err instanceof ForbiddenError) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
     console.error(err);
     return Response.json({ error: "Share failed" }, { status: 500 });
   }
@@ -67,21 +60,8 @@ export async function DELETE(
   { params }: RouteContext<"/api/documents/[id]/share">,
 ) {
   try {
-    const user = await requireUser();
     const { id } = await params;
-
-    const doc = await prisma.document.findUnique({
-      where: { id },
-      include: { access: true },
-    });
-
-    if (!doc) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
-
-    if (!canEdit(user, doc)) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await loadDocumentOrThrow(id, "edit");
 
     const body = await request.json().catch(() => null);
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -103,6 +83,12 @@ export async function DELETE(
   } catch (err) {
     if (err instanceof UnauthorizedError) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (err instanceof NotFoundError) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    if (err instanceof ForbiddenError) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
     console.error(err);
     return Response.json({ error: "Failed to remove access" }, { status: 500 });

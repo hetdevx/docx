@@ -11,10 +11,13 @@ export default async function AdminUsersPage() {
   });
 
   return (
-    <main className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full">
-      <h1 className="text-xl font-semibold text-zinc-950 dark:text-zinc-50 mb-6">
+    <main className="flex-1 px-8 py-8 max-w-2xl mx-auto w-full">
+      <h1 className="text-2xl font-semibold text-foreground mb-1">
         Users
       </h1>
+      <p className="text-sm text-zinc-500 mb-6">
+        Manage who has access to DocVault and their org-wide role.
+      </p>
       <UsersTable initialUsers={users} />
     </main>
   );

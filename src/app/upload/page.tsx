@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { UploadCloud } from "lucide-react";
 
 const ACCEPTED = ".pdf,.docx,.txt";
 
@@ -49,50 +50,65 @@ export default function UploadPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4">
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          const file = e.dataTransfer.files[0];
-          if (file) upload(file);
-        }}
-        onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-md cursor-pointer rounded-lg border-2 border-dashed p-12 text-center transition-colors ${
-          dragOver
-            ? "border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-900"
-            : "border-zinc-300 dark:border-zinc-700"
-        }`}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPTED}
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
+      <div className="w-full max-w-md">
+        <h1 className="text-2xl font-semibold text-foreground text-center mb-1">
+          Upload a document
+        </h1>
+        <p className="text-sm text-zinc-500 text-center mb-6">
+          It will be processed and indexed for search automatically.
+        </p>
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            const file = e.dataTransfer.files[0];
             if (file) upload(file);
           }}
-        />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Drag and drop a file here, or click to browse
-        </p>
-        <p className="mt-1 text-xs text-zinc-400">PDF, DOCX, or TXT — up to 25MB</p>
-
-        {progress !== null && (
-          <div className="mt-4 h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800">
-            <div
-              className="h-2 rounded-full bg-zinc-900 dark:bg-zinc-100 transition-all"
-              style={{ width: `${progress}%` }}
-            />
+          onClick={() => inputRef.current?.click()}
+          className={`cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition-colors ${
+            dragOver
+              ? "border-accent bg-accent-soft"
+              : "border-border-subtle bg-surface hover:border-accent/50"
+          }`}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPTED}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) upload(file);
+            }}
+          />
+          <div
+            className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
+              dragOver ? "bg-accent text-accent-foreground" : "bg-accent-soft text-accent"
+            }`}
+          >
+            <UploadCloud className="h-6 w-6" />
           </div>
-        )}
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Drag and drop a file here, or click to browse
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">PDF, DOCX, or TXT — up to 25MB</p>
 
-        {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {progress !== null && (
+            <div className="mt-4 h-1.5 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full bg-accent transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+
+          {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        </div>
       </div>
     </main>
   );

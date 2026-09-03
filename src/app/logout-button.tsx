@@ -12,7 +12,7 @@ export function LogoutButton() {
         router.push("/login");
         router.refresh();
       }}
-      className="text-sm text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50"
+      className="text-xs text-zinc-500 hover:text-accent"
     >
       Log out
     </button>

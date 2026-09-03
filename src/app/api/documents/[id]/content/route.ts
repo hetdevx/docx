@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, uploadFile } from "@/lib/storage";
 import { extractText } from "@/lib/extract-text";
 import { enqueueEmbedJob } from "@/lib/queue";
-import { canRead, canEdit } from "@/lib/access";
-import { requireUser, UnauthorizedError } from "@/lib/require-user";
+import { canEdit } from "@/lib/access";
+import { loadDocumentOrThrow } from "@/lib/documents";
+import { UnauthorizedError, ForbiddenError, NotFoundError } from "@/lib/require-user";
 
 const DOCX_MIME_TYPE =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -31,21 +32,8 @@ export async function GET(
   { params }: RouteContext<"/api/documents/[id]/content">,
 ) {
   try {
-    const user = await requireUser();
     const { id } = await params;
-
-    const doc = await prisma.document.findUnique({
-      where: { id },
-      include: { access: true },
-    });
-
-    if (!doc) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
-
-    if (!canRead(user, doc)) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const { user, doc } = await loadDocumentOrThrow(id, "read");
 
     const buffer = await getObjectBuffer(doc.storagePath);
     const raw = buffer.toString("utf-8");
@@ -78,6 +66,12 @@ export async function GET(
     if (err instanceof UnauthorizedError) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (err instanceof NotFoundError) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    if (err instanceof ForbiddenError) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
     console.error(err);
     return Response.json({ error: "Failed to load document content" }, { status: 500 });
   }
@@ -88,27 +82,14 @@ export async function PUT(
   { params }: RouteContext<"/api/documents/[id]/content">,
 ) {
   try {
-    const user = await requireUser();
     const { id } = await params;
-
-    const doc = await prisma.document.findUnique({
-      where: { id },
-      include: { access: true },
-    });
-
-    if (!doc) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
+    const { doc } = await loadDocumentOrThrow(id, "edit");
 
     if (!EDITABLE_MIME_TYPES.includes(doc.mimeType)) {
       return Response.json(
         { error: "This file type can't be edited" },
         { status: 400 },
       );
-    }
-
-    if (!canEdit(user, doc)) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json().catch(() => null);
@@ -138,6 +119,12 @@ export async function PUT(
   } catch (err) {
     if (err instanceof UnauthorizedError) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (err instanceof NotFoundError) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    if (err instanceof ForbiddenError) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
     console.error(err);
     return Response.json({ error: "Failed to save document" }, { status: 500 });

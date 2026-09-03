@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
-import { canEdit } from "@/lib/access";
-import { requireUser, UnauthorizedError } from "@/lib/require-user";
+import { loadDocumentOrThrow } from "@/lib/documents";
+import { UnauthorizedError, ForbiddenError, NotFoundError } from "@/lib/require-user";
 
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -12,21 +11,8 @@ export async function POST(
   { params }: RouteContext<"/api/documents/[id]/images">,
 ) {
   try {
-    const user = await requireUser();
     const { id } = await params;
-
-    const doc = await prisma.document.findUnique({
-      where: { id },
-      include: { access: true },
-    });
-
-    if (!doc) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
-
-    if (!canEdit(user, doc)) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await loadDocumentOrThrow(id, "edit");
 
     const formData = await request.formData();
     const file = formData.get("file");
@@ -61,6 +47,12 @@ export async function POST(
   } catch (err) {
     if (err instanceof UnauthorizedError) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (err instanceof NotFoundError) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    if (err instanceof ForbiddenError) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
     console.error(err);
     return Response.json({ error: "Image upload failed" }, { status: 500 });

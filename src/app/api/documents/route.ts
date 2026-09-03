@@ -9,11 +9,16 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => null);
     const title = typeof body?.title === "string" ? body.title.trim() : "";
+    const description =
+      typeof body?.description === "string" ? body.description.trim() : "";
 
     if (!title) {
       return Response.json({ error: "title is required" }, { status: 400 });
     }
 
+    // The doc always starts empty — the AI description isn't used to draft
+    // content up front. It's stored as `aiBrief` and only comes into play
+    // later, as context for Enhance with AI / the in-editor prompt bar.
     const storagePath = `${randomUUID()}-${title}.html`;
     await uploadFile(storagePath, Buffer.from(""), "text/html");
 
@@ -25,6 +30,7 @@ export async function POST(request: Request) {
         mimeType: "text/html",
         size: 0,
         status: "ready",
+        aiBrief: description || null,
         access: {
           create: { userEmail: user.email, permission: "edit" },
         },

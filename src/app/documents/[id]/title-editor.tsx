@@ -46,7 +46,7 @@ export function TitleEditor({
 
   if (!editable) {
     return (
-      <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
+      <h1 className="text-2xl font-semibold text-foreground tracking-tight">
         {title}
       </h1>
     );
@@ -68,7 +68,7 @@ export function TitleEditor({
             setEditing(false);
           }
         }}
-        className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50 bg-transparent border-b-2 border-zinc-300 dark:border-zinc-700 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-50 -ml-0.5 px-0.5"
+        className="text-2xl font-semibold text-foreground tracking-tight bg-transparent border-b-2 border-accent focus:outline-none -ml-0.5 px-0.5"
       />
     );
   }
@@ -78,7 +78,7 @@ export function TitleEditor({
       onClick={() => setEditing(true)}
       className="group flex items-center gap-2 text-left"
     >
-      <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
+      <h1 className="text-2xl font-semibold text-foreground tracking-tight">
         {title}
       </h1>
       <Pencil className="h-4 w-4 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />

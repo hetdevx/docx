@@ -157,24 +157,30 @@ export async function POST(request: Request) {
       .map((r, i) => `[${i + 1}] (${r.title})\n${r.chunk_text}`)
       .join("\n\n");
 
-    const prompt = `Answer the question using only the excerpts below. Cite which document each fact comes from using a plain bracketed number matching the excerpt, e.g. "[1]" — use ASCII brackets only, never full-width or other Unicode bracket characters. Use markdown formatting (bold, lists) where it helps readability.
+    const prompt = `Answer the question using only the excerpts below. Cite which document each fact comes from using a plain bracketed number matching the excerpt, e.g. "[1]" — use ASCII brackets only, never full-width or other Unicode bracket characters.
 
-The question describes (or asks about) a process, sequence of steps, flow, hierarchy, architecture, or relationships between things whenever that's a natural reading of it. In every such case, you MUST include a Mermaid diagram — this is a hard requirement, not optional — in a fenced code block tagged "mermaid", in addition to the prose explanation.
+Format the answer in clean markdown, well-suited to the content:
+- Use "## "/"### " headings to break up distinct sections of a longer answer.
+- Use "-" or "1." lists for enumerations, steps, or action items — never comma-separated run-on lists.
+- Use **bold** for key terms or decisions, and a "> " blockquote for a directly quoted line.
+- For code, commands, config, or file contents, use a fenced code block with the right language tag.
+- Do NOT use markdown tables (they don't render here) — turn tabular/structured data (e.g. a set of fields like date, participants, status) into a short bullet list instead, one "- **Field:** value" per line.
+- Do NOT use raw HTML tags like <br> — use a blank line to start a new paragraph.
+- Separate genuinely distinct topics with a horizontal rule ("---") only if the answer covers more than one.
 
-Strict Mermaid syntax rules (violating these breaks rendering entirely, so follow exactly):
+Only include a Mermaid diagram (fenced code block tagged "mermaid") when the excerpts are specifically about software/technical topics — code architecture, a deployment or CI/CD pipeline, a system or data flow, an API sequence, infrastructure layout. Do NOT add a diagram for meetings, plans, agendas, business processes, or any other non-technical content, even if it describes a sequence of steps — a bullet/numbered list is the right format for those. When a diagram IS warranted, follow these strict Mermaid syntax rules (violating these breaks rendering entirely):
 - Wrap every node's label text in double quotes, always, with no exceptions: \`A["Step one"]\`, not \`A[Step one]\`.
 - This is required even for short labels with no punctuation — quote all of them, every time.
 - Never put a raw \`(\`, \`)\`, \`:\`, \`&\`, \`#\`, \`{\`, or \`}\` character inside a label unless the whole label is quoted (which it always should be per the rule above).
 - Keep it to flowchart (\`flowchart LR\` or \`flowchart TD\`) or sequenceDiagram syntax — nothing more exotic.
 
-Correct example:
+Correct example (only for technical content):
 \`\`\`mermaid
 flowchart LR
     A["Push code to main branch"] --> B["CI runs automated tests"]
     B --> C["Build Docker image (if tests pass)"]
     C --> D["Deploy to production"]
 \`\`\`
-Only skip the diagram for simple factual questions with no structure to visualize (e.g. "what is X's email address").
 
 If the excerpts don't contain the answer, say so.\n\nExcerpts:\n${context}\n\nQuestion: ${question}`;
 

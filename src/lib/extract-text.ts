@@ -1,10 +1,26 @@
-import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import { convert } from "html-to-text";
+
+// pdf-parse (via pdfjs-dist) references the browser-only DOMMatrix API at
+// module-load time, which throws under Node's runtime ("DOMMatrix is not
+// defined") even when only extracting plain text with no canvas rendering
+// involved. A no-op stub is enough to satisfy that reference. Guarded so it
+// only ever runs once, right before the first PDF is actually processed —
+// `pdf-parse` itself is imported dynamically for the same reason: importing
+// it eagerly at the top of this file would crash every call to
+// `extractText`, for every mime type, not just PDFs.
+function ensurePdfPolyfills() {
+  const g = globalThis as unknown as { DOMMatrix?: unknown };
+  if (typeof g.DOMMatrix === "undefined") {
+    g.DOMMatrix = class DOMMatrix {};
+  }
+}
 
 export async function extractText(buffer: Buffer, mimeType: string): Promise<string> {
   switch (mimeType) {
     case "application/pdf": {
+      ensurePdfPolyfills();
+      const { PDFParse } = await import("pdf-parse");
       const parser = new PDFParse({ data: buffer });
       try {
         const result = await parser.getText();

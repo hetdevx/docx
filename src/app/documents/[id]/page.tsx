@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
+import { CalendarDays, User } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/require-user";
 import { canRead, canEdit } from "@/lib/access";
-import { STATUS_STYLES } from "@/lib/status-styles";
+import { StatusBadge } from "@/components/ui/badge";
 import { StatusPoller } from "@/components/status-poller";
 import { DocumentDetailActions } from "./actions";
 import { ContentViewer } from "./content-viewer";
@@ -30,22 +31,29 @@ export default async function DocumentDetailPage(
   const statusPending = doc.status === "pending" || doc.status === "processing";
 
   return (
-    <main className="flex-1 px-6 py-10 max-w-3xl mx-auto w-full">
+    <main className="flex-1 px-8 py-10 max-w-4xl mx-auto w-full">
       <StatusPoller active={statusPending} />
-      <div className="mb-6 space-y-3">
+      <div className="mb-8 pb-6 border-b border-border-subtle space-y-3">
         <div className="flex items-start justify-between gap-4">
           <TitleEditor documentId={doc.id} title={doc.title} editable={editable} />
-          <span
-            className={`shrink-0 mt-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
-              STATUS_STYLES[doc.status] ?? STATUS_STYLES.pending
-            }`}
-          >
-            {doc.status}
+          <div className="shrink-0 mt-1.5">
+            <StatusBadge status={doc.status} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500">
+          <span className="inline-flex items-center gap-1.5">
+            <User className="h-3.5 w-3.5" />
+            {doc.ownerEmail}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5" />
+            {new Date(doc.uploadedAt).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
           </span>
         </div>
-        <p className="text-sm text-zinc-500">
-          {doc.ownerEmail} · {new Date(doc.uploadedAt).toLocaleDateString()}
-        </p>
         {doc.statusReason && (
           <p className="text-sm text-amber-600 dark:text-amber-400">{doc.statusReason}</p>
         )}
@@ -55,6 +63,7 @@ export default async function DocumentDetailPage(
           editable={editable}
           isPublic={doc.isPublic}
           access={doc.access.map((a) => ({ email: a.userEmail, permission: a.permission }))}
+          status={doc.status}
         />
       </div>
 

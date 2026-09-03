@@ -40,6 +40,11 @@ model Document {
   statusReason String?  @map("status_reason")
   isPublic     Boolean  @default(false) @map("is_public")
   uploadedAt   DateTime @default(now()) @map("uploaded_at")
+  // The optional "AI description" brief given at creation time (New Document
+  // modal). Kept around so later AI actions on this doc — Enhance, the
+  // prompt bar — can stay aligned with the original intent instead of only
+  // seeing the doc's current content.
+  aiBrief      String?  @map("ai_brief")
 
   access DocumentAccess[]
   chunks DocumentChunk[]

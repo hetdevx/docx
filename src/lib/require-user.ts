@@ -2,6 +2,7 @@ import { getCurrentUser, type SessionPayload } from "@/lib/session";
 
 export class UnauthorizedError extends Error {}
 export class ForbiddenError extends Error {}
+export class NotFoundError extends Error {}
 
 export async function requireUser(): Promise<SessionPayload> {
   const user = await getCurrentUser();

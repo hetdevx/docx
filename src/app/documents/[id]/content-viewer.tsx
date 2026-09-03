@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
 import { scrollToAndHighlight } from "@/lib/find-in-dom";
+import { Button } from "@/components/ui/button";
 
 export function ContentViewer({
   documentId,
@@ -101,7 +102,7 @@ export function ContentViewer({
 
   if (previewUnavailable) {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 p-8 text-center">
+      <div className="rounded-xl border border-dashed border-border-subtle p-8 text-center">
         <p className="text-sm text-zinc-500">
           A preview isn&apos;t available for this file. Use Download above to
           get the original file.
@@ -118,29 +119,22 @@ export function ContentViewer({
           may have changed since it was indexed.
         </p>
       )}
-      <div className="flex items-center justify-end h-8">
+      <div className="flex items-center justify-end gap-2 h-9">
         {editable && !editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-zinc-50"
-          >
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
             <Pencil className="h-3.5 w-3.5" />
             Edit
-          </button>
+          </Button>
         )}
         {editable && editing && (
-          <div className="flex gap-4">
-            <button onClick={handleCancel} disabled={saving} className="text-sm text-zinc-500">
+          <>
+            <Button variant="secondary" size="sm" onClick={handleCancel} disabled={saving}>
               Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="rounded-md bg-zinc-950 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-950 px-3 py-1 text-sm font-medium disabled:opacity-50"
-            >
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
               {saving ? "Saving..." : "Save"}
-            </button>
-          </div>
+            </Button>
+          </>
         )}
       </div>
 

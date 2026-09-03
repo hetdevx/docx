@@ -8,6 +8,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import Image from "@tiptap/extension-image";
+import { AIAutocomplete } from "./tiptap-extensions/ai-autocomplete";
 import {
   Bold,
   Italic,
@@ -30,6 +31,7 @@ import {
   ImagePlus,
   Loader2,
   Sparkles,
+  Send,
 } from "lucide-react";
 
 export type RichTextEditorHandle = {
@@ -397,6 +399,68 @@ function EnhanceButton({ editor, documentId }: { editor: Editor; documentId: str
   );
 }
 
+function AIPromptBar({ editor, documentId }: { editor: Editor; documentId: string }) {
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleGenerate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!prompt.trim() || generating) return;
+
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/documents/${documentId}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim(), contextHtml: editor.getHTML() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Generation failed");
+        return;
+      }
+      editor.chain().focus().insertContent(data.html).run();
+      setPrompt("");
+    } catch {
+      setError("Generation failed");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleGenerate}
+      className="flex items-center gap-2 border border-zinc-200 dark:border-zinc-800 border-t-0 border-b-0 px-3 py-2 bg-accent-soft/50"
+    >
+      <Sparkles className="h-4 w-4 shrink-0 text-accent" />
+      <input
+        type="text"
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Ask AI to write something… e.g. “draft a project brief”"
+        disabled={generating}
+        className="flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500 disabled:opacity-50"
+      />
+      {error && <span className="text-xs text-red-600 dark:text-red-400 shrink-0">{error}</span>}
+      <button
+        type="submit"
+        disabled={generating || !prompt.trim()}
+        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium text-accent hover:bg-accent-soft disabled:opacity-40 shrink-0"
+      >
+        {generating ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+        {generating ? "Writing..." : "Generate"}
+      </button>
+    </form>
+  );
+}
+
 export const RichTextEditor = forwardRef<
   RichTextEditorHandle,
   {
@@ -414,6 +478,23 @@ export const RichTextEditor = forwardRef<
       Placeholder.configure({ placeholder: "Start writing..." }),
       CharacterCount,
       Image,
+      AIAutocomplete.configure({
+        fetchSuggestion: async (context, signal) => {
+          try {
+            const res = await fetch(`/api/documents/${documentId}/autocomplete`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ context }),
+              signal,
+            });
+            if (!res.ok) return "";
+            const data = await res.json().catch(() => ({}));
+            return typeof data?.suggestion === "string" ? data.suggestion : "";
+          } catch {
+            return "";
+          }
+        },
+      }),
     ],
     content,
     editable,
@@ -457,6 +538,7 @@ export const RichTextEditor = forwardRef<
   return (
     <div>
       {editable && <Toolbar editor={editor} documentId={documentId} />}
+      {editable && <AIPromptBar editor={editor} documentId={documentId} />}
       {editable && <EnhanceButton editor={editor} documentId={documentId} />}
       <EditorContent
         editor={editor}
