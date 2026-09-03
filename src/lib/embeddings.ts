@@ -11,13 +11,20 @@ const EMBEDDING_MODEL = "nvidia/llama-nemotron-embed-vl-1b-v2:free";
 
 export type EmbedTaskType = "document" | "query";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-});
+// Constructed lazily, not at module scope: this module is imported by
+// /api/search, and Next's build-time page-data collection evaluates route
+// modules with no real env vars present — an eager `new OpenAI(...)` here
+// throws "Missing credentials" during `next build` itself, before the app
+// ever runs.
+function getClient(): OpenAI {
+  return new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: "https://openrouter.ai/api/v1",
+  });
+}
 
 export async function embedText(text: string, _type: EmbedTaskType): Promise<number[]> {
-  const res = await client.embeddings.create({
+  const res = await getClient().embeddings.create({
     model: EMBEDDING_MODEL,
     input: text,
     // The OpenAI SDK defaults to requesting base64-encoded embeddings;
