@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrgRole {
+  admin
+  editor
+  viewer
+}
+
+enum AccessPermission {
+  read
+  edit
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  orgRole      OrgRole  @default(viewer) @map("org_role")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  title        String
+  ownerEmail   String   @map("owner_email")
+  storagePath  String   @map("storage_path")
+  mimeType     String   @map("mime_type")
+  size         Int
+  status       String   @default("pending")
+  statusReason String?  @map("status_reason")
+  isPublic     Boolean  @default(false) @map("is_public")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  access DocumentAccess[]
+  chunks DocumentChunk[]
+
+  @@map("documents")
+}
+
+model DocumentAccess {
+  id         String            @id @default(uuid())
+  docId      String            @map("doc_id")
+  userEmail  String            @map("user_email")
+  permission AccessPermission
+
+  document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@unique([docId, userEmail])
+  @@map("document_access")
+}
+
+model DocumentChunk {
+  id         String                   @id @default(uuid())
+  docId      String                   @map("doc_id")
+  chunkText  String                   @map("chunk_text")
+  chunkIndex Int                      @map("chunk_index")
+  embedding  Unsupported("vector(768)")
+
+  document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@map("document_chunks")
+}
