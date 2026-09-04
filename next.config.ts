@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   // doesn't exist, breaking PDF text extraction in Route Handlers. Leaving
   // it external makes Next.js resolve it via plain Node `require` instead.
   serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  outputFileTracingIncludes: {
+    "/api/documents/upload": ["./node_modules/pdfjs-dist/legacy/build/**/*"],
+    "/api/documents/[id]/retry": ["./node_modules/pdfjs-dist/legacy/build/**/*"],
+    "/api/documents/[id]/content": ["./node_modules/pdfjs-dist/legacy/build/**/*"],
+  },
 };
 
 export default nextConfig;
