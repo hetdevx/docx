@@ -6,13 +6,13 @@ import { processDocument } from "@/lib/process-document";
 import { canEdit } from "@/lib/access";
 import { loadDocumentOrThrow } from "@/lib/documents";
 import { UnauthorizedError, ForbiddenError, NotFoundError } from "@/lib/require-user";
-
-const DOCX_MIME_TYPE =
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+import { DOCX_MIME_TYPE } from "@/lib/upload-constraints";
 
 // mammoth can convert DOCX to HTML preserving basic formatting, so it can
-// go through the same "edit → promotes to text/html" flow as .txt. PDF has
-// no equivalent path (extraction loses all structure), so it stays read-only.
+// go through the same "edit → promotes to text/html" flow as .txt. PDFs are
+// converted to DOCX at processing time (see convertPdfToDocx in
+// process-document.ts), so by the time a document reaches this route its
+// mimeType is never still "application/pdf" — this list has no PDF case.
 const EDITABLE_MIME_TYPES = ["text/plain", "text/html", DOCX_MIME_TYPE];
 
 /** TipTap's `content` prop is parsed as HTML, so plain text needs escaping first. */

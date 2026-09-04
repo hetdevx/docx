@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { getObjectBuffer } from "@/lib/storage";
+import { getObjectBuffer, uploadFile } from "@/lib/storage";
 import { extractText } from "@/lib/extract-text";
 import { chunkText } from "@/lib/chunk";
 import { embedText } from "@/lib/embeddings";
+import { convertPdfToDocx } from "@/lib/convert-pdf-to-docx";
+import { DOCX_MIME_TYPE } from "@/lib/upload-constraints";
 
 const LOW_CONTENT_WORD_THRESHOLD = 30;
 
@@ -32,8 +34,29 @@ export async function processDocument(documentId: string): Promise<void> {
   try {
     await prisma.$executeRaw`DELETE FROM document_chunks WHERE doc_id = ${documentId}`;
 
-    const buffer = await getObjectBuffer(document.storagePath);
-    const text = await extractText(buffer, document.mimeType);
+    let buffer = await getObjectBuffer(document.storagePath);
+    let mimeType = document.mimeType;
+
+    // PDFs have no reversible editable-HTML path (extraction loses all
+    // structure), so convert them to a real DOCX first and let the rest of
+    // the pipeline treat the document as DOCX from here on — same file
+    // going forward, in storage and in the DB.
+    if (mimeType === "application/pdf") {
+      const docx = await convertPdfToDocx(buffer);
+      mimeType = DOCX_MIME_TYPE;
+      await uploadFile(document.storagePath, docx, mimeType);
+      await prisma.document.update({
+        where: { id: documentId },
+        data: {
+          mimeType,
+          size: docx.byteLength,
+          title: document.title.replace(/\.pdf$/i, ".docx"),
+        },
+      });
+      buffer = docx;
+    }
+
+    const text = await extractText(buffer, mimeType);
     const chunks = chunkText(text);
 
     if (chunks.length === 0) {

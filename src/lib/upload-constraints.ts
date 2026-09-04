@@ -1,6 +1,9 @@
+export const DOCX_MIME_TYPE =
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  DOCX_MIME_TYPE,
   "text/plain",
   "text/html",
 ] as const;

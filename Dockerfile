@@ -18,6 +18,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# soffice (headless LibreOffice) converts uploaded PDFs to DOCX so they can
+# go through the same editable-content flow as native DOCX uploads.
+RUN apk add --no-cache libreoffice
+
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
